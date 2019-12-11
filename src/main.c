@@ -82,7 +82,13 @@ int main(void)
 
     curl = curl_easy_init();
     if(curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
+        //curl_easy_setopt();
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_URL, "https://only.esni.defo.ie");
+        curl_easy_setopt(curl, CURLOPT_ESNI_STATUS, CURLESNI_ENABLE | CURLESNI_STRICT);
+        curl_easy_setopt(curl, CURLOPT_ESNI_SERVER, "only.esni.defo.ie");
+        curl_easy_setopt(curl, CURLOPT_ESNI_COVER, "cover.defo.ie");
+        curl_easy_setopt(curl, CURLOPT_ESNI_ASCIIRR, "/wHP9I9FACQAHQAg4zRO1QVdMuFmk565cwdQ+y2ZVLBrqH14drbSNgUHlRAAAhMBAQQAAAAAXfFpOAAAAABd8X5QAAA=");
 
 #ifdef SKIP_PEER_VERIFICATION
         /*

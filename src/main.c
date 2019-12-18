@@ -112,11 +112,12 @@ int main(void)
         //curl_easy_setopt();
 
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         curl_easy_setopt(curl, CURLOPT_URL, "https://only.esni.defo.ie");
         curl_easy_setopt(curl, CURLOPT_ESNI_STATUS, CURLESNI_ENABLE | CURLESNI_STRICT);
         curl_easy_setopt(curl, CURLOPT_ESNI_SERVER, "only.esni.defo.ie");
         curl_easy_setopt(curl, CURLOPT_ESNI_COVER, "cover.defo.ie");
-        curl_easy_setopt(curl, CURLOPT_ESNI_ASCIIRR, "/wEJj35rACQAHQAgu5mlVn9LAV7X8CiSoWq4BYi+cM/WmmbwrmbhMfZFnh0AAhMBAQQAAAAAXflgSAAAAABd+XVgAAA=");
+        curl_easy_setopt(curl, CURLOPT_ESNI_ASCIIRR, "/wHKIsrOACQAHQAgQEj0hmUWbuMxfmHelxojc+Z/U52zI7GpK86S5dRmcVQAAhMBAQQAAAAAXfpreAAAAABd+oCQAAA=");
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curlWriteFunction);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, -1L);

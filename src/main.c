@@ -1,33 +1,4 @@
-//#include <stdio.h>
-//#include <curl/curl.h> //home/z/code/curl/include/curl/curl.h
 
-/*
-  main() calls functions with hardcoded parameters, write all  the functions that the api needs
-  3 functions: setup connection, send request / receive data is in one function, shutdown and deallocate resources
-
-  export LD_LIBRARY_PATH=$HOME/code/openssl
-
-  dig command to get keys - static so no need
-    /wFZOW/rACQAHQAgdhA1coOpZxXiUIOBYkZbOI/ciP4G+R4VrEi8PiTLewkAAhMBAQQAAAAAXfAlyAAAAABd8DrgAAA=
-
-
-
-  curl \
-    ${CURL_OPTIONS:="--verbose"} \
-    $enable_doh \
-    $enable_esni \
-    --esni-server ${ESNI_SERVER} \
-    $esni_cover \
-    --esni-load "${ESNI_KEYS}" \
-    $1
-
-
- */
-
-//int main() {
-//    printf("Hello, World!\n");
-//    return 0;
-//}
 
 //void setupESNIconnection(){
 //
@@ -44,51 +15,134 @@
 //}
 
 
-
-/***************************************************************************
- *                                  _   _ ____  _
- *  Project                     ___| | | |  _ \| |
- *                             / __| | | | |_) | |
- *                            | (__| |_| |  _ <| |___
- *                             \___|\___/|_| \_\_____|
- *
- * Copyright (C) 1998 - 2019, Daniel Stenberg, <daniel@haxx.se>, et al.
- *
- * This software is licensed as described in the file COPYING, which
- * you should have received as part of this distribution. The terms
- * are also available at https://curl.haxx.se/docs/copyright.html.
- *
- * You may opt to use, copy, modify, merge, publish, distribute and/or sell
- * copies of the Software, and permit persons to whom the Software is
- * furnished to do so, under the terms of the COPYING file.
- *
- * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
- * KIND, either express or implied.
- *
- ***************************************************************************/
-/* <DESC>
- * Simple HTTPS GET
- * </DESC>
- */
 #include <stdio.h>
 #include <curl/curl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/sha.h>
+#include <openssl/rand.h>
+
+char *buffer;
+
+
+
+struct MemoryStruct {
+    char *memory;
+    size_t size;
+};
+
+size_t curlWriteFunction(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct MemoryStruct *mem = (struct MemoryStruct *) userp;
+
+    char *ptr = realloc(mem->memory, mem->size + realsize + 1);
+    if (ptr == NULL) {
+        /* out of memory! */
+        printf("not enough memory (realloc returned NULL)\n");
+        return 0;
+    }
+
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+
+    return realsize;
+}
+
+void string2hexString(uint8_t *input, char *output, uint8_t length)
+{
+    int loop;
+    int i;
+
+    i=0;
+    loop=0;
+
+    while(loop < length)
+    {
+        sprintf((char*)(output+i),"%02X", input[loop]);
+        loop+=1;
+        i+=2;
+    }
+    //insert NULL at the end of the output string
+    output[i++] = '\0';
+}
+
+
+int sessionIDgen(char *sessionID)
+{
+    //add memory management free()
+
+    uint8_t *rnd = (uint8_t *)malloc(64 );
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+
+    int resultCode = RAND_bytes(rnd,64); //fil rnd with 64 random bytes
+
+    if (resultCode == 1){ //1=successful random number gen
+        //successful rng
+        SHA256_Update(&sha256, rnd, 64); //add rnd value to the message to be hashed
+        SHA256_Final(hash, &sha256); //sha256hash the message and store in hash
+        string2hexString(hash, sessionID, 16); //convert bytes to string and store in the var passed to func
+        return 0; //success rng
+    }else{
+
+        return 1; //fail rng
+    }
+
+}
+
 
 int main(void)
 {
     CURL *curl;
     CURLcode res;
+    struct MemoryStruct chunk;
+
+    chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
+    chunk.size = 0;    /* no data at this point */
+
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     curl = curl_easy_init();
     if(curl) {
         //curl_easy_setopt();
+
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
         curl_easy_setopt(curl, CURLOPT_URL, "https://only.esni.defo.ie");
         curl_easy_setopt(curl, CURLOPT_ESNI_STATUS, CURLESNI_ENABLE | CURLESNI_STRICT);
         curl_easy_setopt(curl, CURLOPT_ESNI_SERVER, "only.esni.defo.ie");
         curl_easy_setopt(curl, CURLOPT_ESNI_COVER, "cover.defo.ie");
-        curl_easy_setopt(curl, CURLOPT_ESNI_ASCIIRR, "/wHP9I9FACQAHQAg4zRO1QVdMuFmk565cwdQ+y2ZVLBrqH14drbSNgUHlRAAAhMBAQQAAAAAXfFpOAAAAABd8X5QAAA=");
+        curl_easy_setopt(curl, CURLOPT_ESNI_ASCIIRR, "/wEJj35rACQAHQAgu5mlVn9LAV7X8CiSoWq4BYi+cM/WmmbwrmbhMfZFnh0AAhMBAQQAAAAAXflgSAAAAABd+XVgAAA=");
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curlWriteFunction);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, -1L);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "data data data meh");
+
+        char *sessionID = (char*)malloc( (16 * 2) +1 );
+
+        int resultCode = sessionIDgen(sessionID);
+
+        if(resultCode == 0) {
+            //string2hexString(randomBuffer, hexRandomBuffer, 64);
+            printf("SessionID: %s\n", sessionID);
+
+            //return 0;
+        }else {
+            printf("Not enough random bytes for PRNG");
+            return 1;
+        }
+        char sessionIDheader[(16*2)+1+14] = "X-Session-Id: ";
+        strcat(sessionIDheader,sessionID);
+        printf("sessionheader::  %s\n",sessionIDheader);
+        struct curl_slist *list = NULL;
+        list = curl_slist_append(list, "User-Agent: ");
+        list = curl_slist_append(list, sessionIDheader);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+
 
 #ifdef SKIP_PEER_VERIFICATION
         /*
@@ -117,10 +171,14 @@ int main(void)
         /* Perform the request, res will get the return code */
         res = curl_easy_perform(curl);
         /* Check for errors */
-        if(res != CURLE_OK)
+        if(res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n",
                     curl_easy_strerror(res));
-
+        }else{
+            printf("--------\n");
+            printf("%lu bytes retrieved\n", (unsigned long)chunk.size);
+            printf("PageData: \n%s", (char*)chunk.memory);
+        }
         /* always cleanup */
         curl_easy_cleanup(curl);
     }

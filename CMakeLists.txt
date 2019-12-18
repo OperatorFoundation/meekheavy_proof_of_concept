@@ -15,4 +15,6 @@ include_directories(src)
 find_library(CURLLIB NAMES libcurl.a libcurl HINTS lib)
 find_library(SSLLIB NAMES libssl.a libssl HINTS lib)
 find_library(CRYPTOLIB NAMES libcrypto.a libcrypto HINTS lib)
-target_link_libraries(esni_curl_api_proof ${CURLLIB} ${SSLLIB} ${CRYPTOLIB} pthread dl)
+find_library(SODIUMLIB NAMES libsodium.a libsodium HINTS lib)
+
+target_link_libraries(esni_curl_api_proof ${CURLLIB} ${SSLLIB} ${CRYPTOLIB} ${SODIUMLIB}  pthread dl)

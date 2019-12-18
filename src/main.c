@@ -177,6 +177,9 @@ int main(void)
                     curl_easy_strerror(res));
         }else{
             printf("--------\n");
+            long httpResponseCode = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpResponseCode);
+            printf("httpResponseCode: %li\n", httpResponseCode);
             printf("%lu bytes retrieved\n", (unsigned long)chunk.size);
             printf("PageData: \n%s", (char*)chunk.memory);
         }
